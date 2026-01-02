@@ -1,0 +1,61 @@
+# proxy-switch bash completion
+
+_proxy-switch() {
+    local cur prev words cword
+    _init_completion || return
+
+    local commands="add use list delete disable status help interactive no-proxy"
+
+    # Complete commands
+    if [[ $cword -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+        return
+    fi
+
+    local command="${words[1]}"
+
+    # Get available profile names
+    local profiles=""
+    if [[ -f "${HOME}/.proxy-switch/profiles" ]]; then
+        profiles=$(grep "^# \[proxy-switch:" "${HOME}/.proxy-switch/profiles" | sed 's/# \[proxy-switch: //' | sed 's/\]//')
+    fi
+
+    # no-proxy subcommands
+    local no_proxy_cmds="list add remove clear"
+
+    case "$command" in
+        add|set)
+            if [[ $cword -eq 2 ]]; then
+                # Complete profile name
+                COMPREPLY=( $(compgen -W "$profiles" -- "$cur") )
+            fi
+            ;;
+        use|enable|switch|delete|remove|rm)
+            if [[ $cword -ge 2 ]]; then
+                # Complete profile name
+                COMPREPLY=( $(compgen -W "$profiles" -- "$cur") )
+            fi
+            ;;
+        no-proxy)
+            if [[ $cword -eq 2 ]]; then
+                COMPREPLY=( $(compgen -W "$no_proxy_cmds" -- "$cur") )
+                return
+            fi
+
+            local no_proxy_cmd="${words[2]}"
+            case "$no_proxy_cmd" in
+                add|remove)
+                    # Complete with domains from current no_proxy list
+                    local current_no_proxy=""
+                    if [[ -f "${HOME}/.bashrc" ]]; then
+                        current_no_proxy=$(grep "^export no_proxy=" "${HOME}/.bashrc" 2>/dev/null | cut -d'"' -f2 || echo "")
+                    fi
+                    # Just return empty for now - domains are user-defined
+                    COMPREPLY=()
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+complete -F _proxy-switch proxy-switch
